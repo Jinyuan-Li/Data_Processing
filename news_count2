@@ -1,0 +1,133 @@
+import time
+import numpy as np
+import pandas as pd
+t0 = time.time()
+
+# .csv讀取時有時會出現亂碼，可改存為.xlsx再讀取
+df = pd.read_excel(r'\\Tspc-nas\中心資源\公-同仁暫存檔(請自行留檔)\◎晉源\教學系列\Python基礎\媒體監測業務會議資料raw.xlsx', sheet_name='媒體監測業務會議資料')
+
+# print(df)
+# print(df.duplicated(['刊登報紙&標題']))
+
+# df = pd.DataFrame([[1, 2], [4, 5], [7, 8]],
+#      index=['cobra', 'viper', 'sidewinder'],
+#      columns=['max_speed', 'shield'])
+#
+# df.loc['cobra', 'shield'] += 1
+# print(df)
+# print(df.loc['cobra', 'shield'])
+
+df['刊登報紙&標題'] = df['刊登報紙'] + df['刊登標題']
+# df['test'] = df.duplicated(['刊登報紙&標題'])
+df = df.drop_duplicates(['刊登報紙&標題'])
+
+month_list = ['19-07', '19-08', '19-09', '19-10', '19-11', '19-12', '20-01', '20-02', '20-03', '20-04', '20-05', '20-06', '20-07', '20-08', '20-09', '20-10', '20-11']
+type_list = ['O1', 'O2', 'O3', 'O4', 'O5', 'O6', 'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'COUNT']
+yn_list = ['否', '是', '否', '是', '是', '是', '否', '否', '否', '否', '否', '否']
+
+df_count = pd.DataFrame(np.zeros((17, 13)), index=month_list, columns=type_list)
+# print(df_count)
+
+column_no = [33, 35, 34, 38, 36, 37, 26, 30, 25, 31, 32, 29]
+for i in range(df.shape[0]):
+    # if i < 5:
+        # print(str(df.iloc[i, 2])[2:7])
+
+        df_count.loc[str(df.iloc[i, 2])[2:7], 'COUNT'] += 1
+        # if df.iloc[i, 33] == '否':
+        #     df_count.loc[str(df.iloc[i, 2])[2:7], 'O1'] += 1
+        # if df.iloc[i, 36] == '是':
+        #     df_count.loc[str(df.iloc[i, 2])[2:7], 'O5'] += 1
+
+        for j in range(len(column_no)):
+            if df.iloc[i, column_no[j]] == yn_list[j]:
+                df_count.loc[str(df.iloc[i, 2])[2:7], type_list[j]] += 1
+
+for i in range(len(column_no)):
+    df_count[type_list[i] + 'R'] = df_count[type_list[i]] / df_count['COUNT']
+df_count = df_count.drop(columns=type_list)
+
+# print(df_count)
+# df.to_excel(r'C:\Users\user\Desktop\test.xlsx', sheet_name='test', index=0, header=1)
+
+# df_count.to_excel(r'C:\Users\user\Desktop\test2.xlsx', sheet_name='test', index=1, header=1)
+# print(df_count['O1R'][-12:])
+
+
+
+'----------以下為製圖程式碼----------'
+import matplotlib.pyplot as plt
+
+# 印出中文字預設
+plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei']
+plt.rcParams['axes.unicode_minus'] = False
+
+# plt.plot([1, 3], [2, 28], 'o-')
+# plt.plot([3, 4], [2.5, 3.5], 'o-')
+
+markers_line_list = ['o-', 'D-', 's-', 'o--', 'D--', 's--']
+label_list1 = ['刊登在內頁', '與醫療衛生專家密切討論', '用自殺身亡而非自殺成功', '提及其他解決方法', '提供與自殺防治有關的資源', '報導呼籲危險指標']
+for i in range(6):
+    plt.plot(month_list[-12:], df_count[type_list[i] + 'R'][-12:]*100, markers_line_list[i], label=label_list1[i])
+
+plt.title('四大報-六要遵守率', fontsize=12)
+plt.xticks(rotation=45)
+plt.ylabel("%", fontsize=12)
+plt.yticks(np.linspace(0, 100, 3))
+plt.legend(bbox_to_anchor=(0.05, -0.35), loc='center left', ncol=2)
+plt.tight_layout()
+plt.grid(axis="y")
+
+# plt.show()
+plt.savefig(r'C:\Users\user\Desktop\test1.jpg')
+plt.clf()
+
+
+
+label_list2 = ['不要報導自殺方式細節', '不要簡化自殺原因', '不要將自殺光榮化或聳動化', '不要用宗教或文化刻板印象', '不要過度責備', '不要刊登照片或自殺遺書']
+for i in range(6):
+    plt.plot(month_list[-12:], df_count[type_list[i+6] + 'R'][-12:]*100, markers_line_list[i], label=label_list2[i])
+
+plt.title('四大報-六不遵守率', fontsize=12)
+plt.xticks(rotation=45)
+plt.ylabel("%", fontsize=12)
+plt.yticks(np.linspace(0, 100, 3))
+plt.legend(bbox_to_anchor=(0.05, -0.35), loc='center left', ncol=2)
+plt.tight_layout()
+plt.grid(axis="y")
+
+# plt.show()
+plt.savefig(r'C:\Users\user\Desktop\test2.jpg')
+
+
+
+'----------以下為製做Word程式碼----------'
+from docx import Document
+from docx.oxml.ns import qn
+from docx.shared import Inches, Cm, Pt
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+
+doc = Document()  # doc对象
+section = doc.sections[0]
+section.left_margin = Cm(1.27)
+section.right_margin = Cm(1.27)
+section.top_margin = Cm(1.27)
+section.bottom_margin = Cm(1.27)
+image_title = ['四大報-六要遵守率', '四大報-六不遵守率']
+for i in range(2):
+    # 加入圖片請輸入以下4行
+    paragraph = doc.add_paragraph()
+    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    run = paragraph.add_run()
+    run.add_picture(r'C:\Users\user\Desktop\test%s.jpg' % str(i + 1), width=Inches(5.8))  # 添加图, 设置宽度
+
+    # 加入文字請輸入以下6行
+    paragraph = doc.add_paragraph()
+    paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    run = paragraph.add_run(image_title[i])
+    run.font.name = 'Arial'  # 設定英文字體
+    run.font.size = Pt(14)
+    run._element.rPr.rFonts.set(qn('w:eastAsia'), u'標楷體')
+doc.save(r'C:\Users\user\Desktop\test.docx')  # 保存路径
+
+print('花費時間：',time.time()-t0)
